@@ -36,7 +36,7 @@ class windows_sensu (
   $rabbitmq_vhost           = '/sensu',
   $rabbitmq_ssl_private_key = '/etc/sensu/ssl/cert.pem',
   $rabbitmq_ssl_cert_chain  = '/etc/sensu/ssl/key.pem',
-  $subscriptions            = ["all"],
+  $subscriptions            = ["hyper-v"],
   $client_address           = $::ipaddress,
   $client_name              = $::fqdn,
   $client_custom            = {},
@@ -72,12 +72,12 @@ class windows_sensu (
     line    => "<arguments>C:\\opt\\sensu\\embedded\\bin\\sensu-client -d C:\\etc\\sensu\\conf.d -l C:\\opt\\sensu\\sensu-client.log</arguments>",
     ensure  => present,
     require => Package[$package],
-    before  => Exec['sensu_service'],
+    before  => Exec['sc_create_sensu_service'],
   }
  
   file{'c:/etc': ensure  => directory, }
   file{'c:/etc/sensu': ensure => directory, }
-  file{'c:/etc/sensu/ssl': ensure => directory, }
+  file{'c:/etc/sensu/ssl': ensure => directory,}
   file{'c:/etc/sensu/conf.d': ensure => directory, }
   File['c:/etc'] -> File['c:/etc/sensu'] -> File['c:/etc/sensu/ssl'] ->  File['c:/etc/sensu/conf.d']
  
@@ -86,13 +86,21 @@ class windows_sensu (
     source  => "puppet:///extra_files/sensu/cert.pem",
     require => File['c:/etc', 'c:/etc/sensu', 'c:/etc/sensu/conf.d', 'c:/etc/sensu/ssl'],
   }
-  
-  file { 'c:/etc/sensu/ssl/key.pem':
-    ensure  => present,
-    source  => "puppet:///extra_files/sensu/key.pem",
-    require => File['c:/etc', 'c:/etc/sensu', 'c:/etc/sensu/conf.d', 'c:/etc/sensu/ssl'],
+
+  windows_common::remote_file{'key.pem':
+    source      => "http://10.21.7.22/sensu/key.pem",
+    destination => 'c:/etc/sensu/ssl/key.pem',
+    require     => File['c:/etc', 'c:/etc/sensu', 'c:/etc/sensu/conf.d', 'c:/etc/sensu/ssl'],
   }
-  
+ 
+  #file { 'c:/etc/sensu/ssl/key.pem':
+   # ensure  => present,
+    #source  => "puppet:///extra_files/sensu/key.pem",
+    #source   => "http:///10.21.7.22/tim/sensu/key.pem",
+    #require => File['c:/etc', 'c:/etc/sensu', 'c:/etc/sensu/conf.d', 'c:/etc/sensu/ssl'],
+    #source_permissions  => ignore,
+  #}
+
   file { 'c:/etc/sensu/conf.d/rabbitmq.json':
     ensure  => present,
     before  => Sensu_rabbitmq_config[$::fqdn],
@@ -125,12 +133,19 @@ class windows_sensu (
     custom        => $windows_sensu::client_custom,
   }
   
-  exec { 'sensu_service':
+  exec { 'sc_create_sensu_service':
     command   => 'sc.exe create sensu-client start= delayed-auto binPath= c:\opt\sensu\bin\sensu-client.exe DisplayName= "Sensu Client"',
     path      => "${path}",
     logoutput => true,
-    require   => Package[$package],
+    require   => [Package[$package],File['c:/etc/sensu/conf.d/client.json'],File['c:/etc/sensu/conf.d/rabbitmq.json']],
     unless    => 'sc.exe getdisplayname sensu-client',
+  }
+
+  service { 'sensu-client':
+    ensure    => running,
+    enable    => true,
+    require   => Exec[sc_create_sensu_service],
+    subscribe => [ File['c:/etc/sensu/conf.d/client.json'],File['c:/etc/sensu/conf.d/rabbitmq.json'] ],
   }
 }
 
