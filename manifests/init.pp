@@ -34,13 +34,13 @@ class windows_sensu (
   $rabbitmq_user            = 'sensu',
   $rabbitmq_password        = '',
   $rabbitmq_vhost           = '/sensu',
-  $rabbitmq_ssl_private_key = '/etc/sensu/ssl/cert.pem',
-  $rabbitmq_ssl_cert_chain  = '/etc/sensu/ssl/key.pem',
+  $rabbitmq_ssl_private_key = '/etc/sensu/ssl/key.pem',
+  $rabbitmq_ssl_cert_chain  = '/etc/sensu/ssl/cert.pem',
   $subscriptions            = ["hyper-v"],
   $client_address           = $::ipaddress,
   $client_name              = $::fqdn,
   $client_custom            = {},
-  $safe_mode                = false,
+  $safe_mode                = true,
   
 ) inherits windows_sensu::params {
 
