@@ -37,7 +37,6 @@ class windows_sensu (
   $rabbitmq_ssl_private_key = '/etc/sensu/ssl/key.pem',
   $rabbitmq_ssl_cert_chain  = '/etc/sensu/ssl/cert.pem',
   $subscriptions            = ["hyper-v"],
-  $client_address           = $::ipaddress,
   $client_name              = $::fqdn,
   $client_custom            = {},
   $safe_mode                = true,
@@ -123,6 +122,10 @@ class windows_sensu (
     before  => Sensu_client_config[$::fqdn],
     require => File['c:/etc', 'c:/etc/sensu', 'c:/etc/sensu/conf.d', 'c:/etc/sensu/ssl'],
   }
+
+  $client_address  = inline_template("<%= `nslookup ${::fqdn} | grep '10.21.7' | cut -d ':' -f2 |  tr '\n' '\t' | sed 's/^[ \t]*//;s/[ \t]*$//'` -%>")
+
+  notify { "client address is ${client_address}": }
 
   sensu_client_config { $::fqdn:
     ensure        => present,
