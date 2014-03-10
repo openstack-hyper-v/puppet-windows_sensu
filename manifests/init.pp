@@ -40,8 +40,7 @@ class windows_sensu (
   $client_name              = $::fqdn,
   $client_custom            = {},
   $safe_mode                = false,
-  $import_community_plugins  = true,
-  $community_plugins_git_url = 'https://github.com/sensu/sensu-community-plugins.git'
+
 ) inherits windows_sensu::params {
 
   if $file_path {
@@ -152,20 +151,5 @@ class windows_sensu (
     subscribe => [ File['c:/etc/sensu/conf.d/client.json'],File['c:/etc/sensu/conf.d/rabbitmq.json'] ],
   }
 
-  if ($import_community_plugins) {
-    vcsrepo {'community-plugins':
-      ensure      => 'latest',
-#      revision    => 'origin/HEAD',
-      path        => 'C:/ProgramData/community-plugins',
-      source      => $community_plugins_git_url,
-      provider    => 'git',
-    }
-    
-    file { 'c:/etc/sensu/plugins':
-      ensure  => link,
-      target  => 'C:/ProgramData/community-plugins/plugins/',
-      require => [File['c:/etc', 'c:/etc/sensu'],Vcsrepo['community-plugins']],
-    }
-  }
 }
 
